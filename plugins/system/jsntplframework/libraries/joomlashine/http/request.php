@@ -18,7 +18,7 @@ defined('_JEXEC') or die('Restricted access');
 jimport('joomla.filesystem.file');
 
 // Import HTTP client library
-class_exists('http_class') OR require_once dirname(dirname(dirname(__FILE__))) . '/3rd-party/httpclient/http.php';
+class_exists('http_class') OR require_once JSN_PATH_TPLFRAMEWORK . '/libraries/3rd-party/httpclient/http.php';
 
 /**
  * Http Client
@@ -99,6 +99,7 @@ abstract class JSNTplHttpRequest
 				{
 					throw new Exception(JText::sprintf('JSN_TPLFW_HTTP_CONNECTION_ERROR', $error));
 				}
+
 				$result['header'] = $header;
 
 				// Validate header
@@ -124,6 +125,26 @@ abstract class JSNTplHttpRequest
 					}
 
 					$result['body'] .= $body;
+				}
+
+				// Validate header
+				if (is_array($validateHeader))
+				{
+					foreach ($validateHeader AS $k => $v)
+					{
+						foreach ($result['header'] AS $header => $value)
+						{
+							if (strcasecmp($header, $k) == 0)
+							{
+								is_array($v) OR $v = array($v);
+
+								if ( ! in_array($value, $v))
+								{
+									throw new Exception($result['body']);
+								}
+							}
+						}
+					}
 				}
 			}
 			else

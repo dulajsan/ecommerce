@@ -16,6 +16,7 @@ defined('_JEXEC') or die('Restricted access');
 
 // Import necessary Joomla libraries
 jimport('joomla.filesystem.folder');
+jimport('joomla.filesystem.file');
 jimport('joomla.registry.registry');
 
 /**
@@ -27,27 +28,62 @@ jimport('joomla.registry.registry');
  */
 abstract class JSNTplHelper
 {
-	/**
-	 * JVersion instance
-	 *
-	 * @var  JVersion
-	 */
-	private static $_version;
+	protected static $templateData;
 
-	private static $_versionData;
+	protected static $versionData;
+
+	/**
+	 * Get editing template.
+	 *
+	 * @return  object  Object containing template details or NULL if failure.
+	 */
+	public static function &getEditingTemplate()
+	{
+		if ( ! isset(self::$templateData))
+		{
+			$app = JFactory::getApplication();
+			$data = null;
+
+			if (
+				$app->input->getCmd('option') == 'com_templates' AND $app->input->getCmd('view') == 'style'
+				AND
+				$app->input->getCmd('layout') == 'edit' AND $app->input->getInt('id')
+			)
+			{
+				// Get template model
+				$model = class_exists('JModelLegacy') ? JModelLegacy::getInstance('Style', 'TemplatesModel') : JModel::getInstance('Style', 'TemplatesModel');
+
+				// Get style data
+				$data = $model->getItem($app->input->getInt('id'));
+
+				// Instantiate helper class of JSN Template Framework
+				$helper = JSNTplTemplateHelper::getInstance();
+
+				// Prepare template parameters
+				$data->params = $helper->loadParams($data->params, $data->template);
+			}
+
+			// Store template data
+			self::$templateData = $data;
+		}
+
+		return self::$templateData;
+	}
 
 	/**
 	 * Load templateDetails.xml using simplexml and return it
 	 *
-	 * @param   string  $template  The template name
+	 * @param   string   $template  The template name.
+	 * @param   boolean  $reRead    Re-read manifest file if already read before.
 	 *
 	 * @return  object
 	 */
-	public static function getManifest ($template)
+	public static function getManifest ($template, $reRead = false)
 	{
 		$registry = JRegistry::getInstance('JSNTplFramework');
 
-		if ($registry->exists('template.manifest')) {
+		if ( ! $reRead AND $registry->exists('template.manifest'))
+		{
 			return $registry->get('template.manifest');
 		}
 
@@ -55,6 +91,15 @@ abstract class JSNTplHelper
 		$registry->set('template.manifest', $xmlDocument);
 
 		return $xmlDocument;
+	}
+
+	/**
+	 *
+	 * @return boolean [description]
+	 */
+	public static function isDisabledFunction ($name)
+	{
+		return ! (function_exists($name) AND ! ini_get('safe_mode'));
 	}
 
 	/**
@@ -103,6 +148,12 @@ abstract class JSNTplHelper
 	 */
 	public static function getTemplateId ($name)
 	{
+		if ($details = JSNTplTemplateRecognization::detect($name))
+		{
+			return strtolower("tpl_{$details->name}");
+		}
+
+		// Backward compatible
 		$manifest = self::getManifest($name);
 
 		if (isset($manifest->identifiedName)) {
@@ -115,23 +166,39 @@ abstract class JSNTplHelper
 	}
 
 	/**
-	 * Retrieve version of the template that determined by name
+	 * Get template version.
 	 *
-	 * @param   string  $name  The template name to retrieve version
+	 * @param   string  $template  Name of template directory.
+	 *
 	 * @return  string
 	 */
-	public static function getTemplateVersion ($name)
+	public static function getTemplateVersion($template)
 	{
-		$registry = JRegistry::getInstance('JSNTplFramework');
-
-		if ($registry->exists('template.version')) {
-			return $registry->get('template.version');
+		if (class_exists('JSNTplTemplateRecognization') AND $details = JSNTplTemplateRecognization::detect($template))
+		{
+			return $details->version;
 		}
 
-		$manifest = JSNTplHelper::getManifestCache($name);
-		$version  = $manifest->version;
+		// Backward compatible
+		$const = strtoupper(preg_replace('/(free|pro)$/i', 'version', $template));
 
-		$registry->set('template.version', $version);
+		if ( ! defined($const) AND is_readable(JPATH_ROOT . '/templates/' . $template . '/template.defines.php'))
+		{
+			require_once JPATH_ROOT . '/templates/' . $template . '/template.defines.php';
+		}
+
+		// Get template version from constant if defined
+		if (defined($const))
+		{
+			eval('$version = ' . $const . ';');
+		}
+		// Get template version from manifest cache if constant is not defined
+		else
+		{
+			$version = self::getManifestCache($template);
+			$version = $version->version;
+		}
+
 		return $version;
 	}
 
@@ -143,6 +210,12 @@ abstract class JSNTplHelper
 	 */
 	public static function getTemplateEdition ($name)
 	{
+		if ($details = JSNTplTemplateRecognization::detect($name))
+		{
+			return $details->edition;
+		}
+
+		// Backward compatible
 		$registry = JRegistry::getInstance('JSNTplFramework');
 
 		if ($registry->exists('template.edition')) {
@@ -163,18 +236,33 @@ abstract class JSNTplHelper
 	 */
 	public static function findInstalledExtensions ()
 	{
-		$registry = JRegistry::getInstance('JSNTplFramework');
-		$installedExtensions = $registry->get('extension.installed', array());
+		$registry = JRegistry::getInstance( 'JSNTplFramework' );
+		$installedExtensions = $registry->get( 'extensions.installed', array() );
 
-		if (empty($installedExtensions)) {
-			$dbo = JFactory::getDBO();
-			$dbo->setQuery('SELECT element, manifest_cache FROM #__extensions WHERE type IN ("component", "plugin", "module")');
+		if (empty($installedExtensions))
+		{
+			$db	= JFactory::getDbo();
+			$q	= $db->getQuery( true );
 
-			foreach ($dbo->loadObjectList() as $extension) {
-				$installedExtensions[$extension->element] = json_decode($extension->manifest_cache);
+			$q->select( 'type, element, folder, manifest_cache' );
+			$q->from( '#__extensions' );
+			$q->where( 'type IN ("component", "plugin", "module")' );
+
+			$db->setQuery( $q );
+
+			foreach ( $db->loadObjectList() AS $extension )
+			{
+				if ( 'plugin' == $extension->type )
+				{
+					$installedExtensions["plugin-{$extension->folder}"][ $extension->element ] = json_decode( $extension->manifest_cache );
+				}
+				else
+				{
+					$installedExtensions[ $extension->type ][ $extension->element ] = json_decode( $extension->manifest_cache );
+				}
 			}
 
-			$registry->set('extension.installed', $installedExtensions);
+			$registry->set( 'extensions.installed', $installedExtensions );
 		}
 
 		return $installedExtensions;
@@ -192,26 +280,75 @@ abstract class JSNTplHelper
 		if (preg_match('/^jsn_(.*)_(free|pro)$/i', $template, $matched)) {
 			$nameOfProEdition = sprintf('jsn_%s_pro', $matched[1]);
 
-			$dbo = JFactory::getDBO();
-			$dbo->setQuery("SELECT count(*) FROM #__extensions WHERE type LIKE 'template' AND element LIKE '{$nameOfProEdition}'");
+			$db	= JFactory::getDbo();
+			$q	= $db->getQuery(true);
 
-			return intval($dbo->loadResult()) > 0;
+			$q->select('COUNT(*)');
+			$q->from('#__extensions');
+			$q->where('type = ' . $q->quote('template'));
+			$q->where('element = ' . $q->quote($nameOfProEdition));
+
+			$db->setQuery($q);
+
+			return intval($db->loadResult()) > 0;
 		}
 
 		return false;
 	}
 
 	/**
-	 * Return TRUE when extension with name=$name is installed
+	 * Check if an extension is installed.
 	 *
-	 * @param   string   $name  The name of extension
+	 * @param   string  $name  The name of extension.
+	 * @param   string  $type  Either 'component', 'module' or 'plugin'.
 	 *
 	 * @return  boolean
 	 */
-	public static function isInstalledExtension ($name)
+	public static function isInstalledExtension( $name, $type = 'component' )
 	{
 		$installedExtensions = self::findInstalledExtensions();
-		return isset($installedExtensions[$name]);
+
+		// Check if plugin folder is not included in type?
+		if ( 'plugin' == $type )
+		{
+			foreach ( $installedExtensions as $_type => $exts )
+			{
+				if ( 0 === strpos( $_type, 'plugin' ) && isset( $installedExtensions[ $_type ][ $name ] ) )
+				{
+					return true;
+				}
+			}
+		}
+
+		// Check if extension of the specified type is installed?
+		if ( isset( $installedExtensions[ $type ] ) && isset( $installedExtensions[ $type ][ $name ] ) )
+		{
+			// Make sure extension exists in file system also.
+			if ( 'component' == $type )
+			{
+				return (
+					@is_dir( JPATH_ADMINISTRATOR . '/components/' . $name )
+					&&
+					@is_dir( JPATH_ROOT . '/components/' . $name )
+				);
+			}
+			elseif ( 'module' == $type )
+			{
+				return (
+					@is_dir( JPATH_ADMINISTRATOR . '/modules/' . $name )
+					||
+					@is_dir( JPATH_ROOT . '/modules/' . $name )
+				);
+			}
+			elseif ( 0 === strpos( $type, 'plugin-' ) )
+			{
+				@list( $folder, $name ) = explode( '-', $name, 2 );
+
+				return @is_dir( JPATH_ROOT . '/plugins/' . $folder . '/' . $name );
+			}
+		}
+
+		return false;
 	}
 
 	/**
@@ -223,6 +360,8 @@ abstract class JSNTplHelper
 	 */
 	public static function getModifiedFiles ($template)
 	{
+		jimport('joomla.filesystem.folder');
+
 		$templatePath = JPATH_SITE . "/templates/{$template}";
 		$checksumFile = $templatePath . '/template.checksum';
 
@@ -246,8 +385,11 @@ abstract class JSNTplHelper
 			}
 		}
 
+		// Define regex pattern of file to be excluded
+		$exclude = '#(/*backups?/|template\.checksum|template\.defines\.php|templateDetails\.xml|editions\.json|\.svn|CVS|language)#';
+
 		// Find all files in template folder and check it state
-		$files = JFolder::files($templatePath, '.', true, true, array('.checksum', '.svn', 'CVS', 'language'));
+		$files = JFolder::files($templatePath, '.', true, true);
 
 		$addedFiles = array();
 		$changedFiles = array();
@@ -256,24 +398,30 @@ abstract class JSNTplHelper
 
 		foreach ($files AS $file)
 		{
-			$fileMd5 = md5_file($file);
-			$file = str_replace(DIRECTORY_SEPARATOR, '/', $file);
-			$file = ltrim(substr($file, strlen($templatePath)), '/');
+			// Fine-tune file path
+			$file = str_replace('\\', '/', $file);
 
-			// Checking file is added
-			if ( ! isset($hashTable[$file]))
+			if ( ! preg_match($exclude, $file))
 			{
-				$addedFiles[] = $file;
-			}
-			// Checking file is changed
-			elseif (isset($hashTable[$file]) && $fileMd5 != $hashTable[$file])
-			{
-				$changedFiles[] = $file;
-			}
-			// Checking file is original
-			elseif (isset($hashTable[$file]) && $fileMd5 == $hashTable[$file])
-			{
-				$originalFiles[] = $file;
+				$fileMd5 = md5_file($file);
+				$file = str_replace(DIRECTORY_SEPARATOR, '/', $file);
+				$file = ltrim(substr($file, strlen($templatePath)), '/');
+
+				// Checking file is added
+				if ( ! isset($hashTable[$file]))
+				{
+					$addedFiles[] = $file;
+				}
+				// Checking file is changed
+				elseif (isset($hashTable[$file]) && $fileMd5 != $hashTable[$file])
+				{
+					$changedFiles[] = $file;
+				}
+				// Checking file is original
+				elseif (isset($hashTable[$file]) && $fileMd5 == $hashTable[$file])
+				{
+					$originalFiles[] = $file;
+				}
 			}
 		}
 
@@ -283,42 +431,212 @@ abstract class JSNTplHelper
 		// Find all deleted files
 		foreach (array_keys($hashTable) AS $item)
 		{
-			if ( ! in_array($item, $templateFiles))
+			if ( ! preg_match($exclude, $item))
 			{
-				$deletedFiles[] = $item;
+				if ( ! in_array($item, $templateFiles))
+				{
+					$deletedFiles[] = $item;
+				}
 			}
 		}
 
 		return array(
-			'add' => $addedFiles,
-			'delete' => $deletedFiles,
-			'edit' => $changedFiles
+			'add'		=> $addedFiles,
+			'edit'		=> $changedFiles,
+			'delete'	=> $deletedFiles
 		);
+	}
+
+	/**
+	 * List all files that are being updated.
+	 *
+	 * @param   string  $template  The template name
+	 * @param   string  $path      Path to downloaded template update package
+	 *
+	 * @return  mixed
+	 */
+	public static function getFilesBeingUpdated($template, $path)
+	{
+		jimport('joomla.filesystem.archive');
+
+		// Extract template update package
+		$file = $path;
+		$path = dirname($file) . '/' . substr(basename($file), 0, -4);
+
+		if ( ! JArchive::extract($file, $path))
+		{
+			throw new Exception(JText::_('JSN_TPLFW_ERROR_DOWNLOAD_PACKAGE_FILE_NOT_FOUND'));
+		}
+
+		// Read checksum file included in update package
+		$checksumFile = $path . '/template/template.checksum';
+
+		if ( ! is_readable($checksumFile))
+		{
+			return false;
+		}
+
+		$files = JFile::read($checksumFile);
+		$newHash = array();
+
+		// Parse all hash data from checksum file
+		foreach (explode("\n", $files) AS $line)
+		{
+			$line = trim($line);
+
+			if ( ! empty($line) AND strpos($line, "\t") !== false)
+			{
+				list($path, $hash) = explode("\t", $line);
+				$newHash[$path] = $hash;
+			}
+		}
+
+		// Read checksum file of currently installed template
+		$checksumFile = JPATH_SITE . "/templates/{$template}/template.checksum";
+
+		if ( ! is_readable($checksumFile))
+		{
+			return false;
+		}
+
+		$files = JFile::read($checksumFile);
+		$oldHash = array();
+
+		// Parse all hash data from checksum file
+		foreach (explode("\n", $files) AS $line)
+		{
+			$line = trim($line);
+
+			if ( ! empty($line) AND strpos($line, "\t") !== false)
+			{
+				list($path, $hash) = explode("\t", $line);
+				$oldHash[$path] = $hash;
+			}
+		}
+
+		// Preset some arrays
+		$addedFiles		= array();
+		$changedFiles	= array();
+		$removedFiles	= array();
+
+		foreach ($oldHash AS $path => $checkum)
+		{
+			// Check if file is removed
+			if ( ! isset($newHash[$path]))
+			{
+				$removedFiles[] = $path;
+			}
+			// Check if file is changed
+			elseif (isset($newHash[$path]) && $checkum != $newHash[$path])
+			{
+				$changedFiles[] = $path;
+			}
+		}
+
+		foreach ($newHash AS $path => $checkum)
+		{
+			// Check if file is newly added
+			if ( ! isset($oldHash[$path]))
+			{
+				$addedFiles[] = $path;
+			}
+		}
+
+		return array(
+			'add'		=> $addedFiles,
+			'edit'		=> $changedFiles,
+			'delete'	=> $removedFiles
+		);
+	}
+
+	/**
+	 * List all modified files that are being updated.
+	 *
+	 * @param   string  $template  The template name
+	 * @param   string  $path      Path to downloaded template update package
+	 *
+	 * @return  mixed
+	 */
+	public static function getModifiedFilesBeingUpdated($template, $path)
+	{
+		$modifiedFiles = array();
+
+		// Get list of files being updated
+		if ($filesBeingUpdated = self::getFilesBeingUpdated($template, $path))
+		{
+			// Merge difference type of modification
+			$filesBeingUpdated = call_user_func_array('array_merge', $filesBeingUpdated);
+
+			// Now check if any file being updated is manually modified by user
+			foreach (self::getModifiedFiles($template) AS $k => $v)
+			{
+				if ($k != 'delete')
+				{
+					foreach ($v AS $file)
+					{
+						if (in_array($file, $filesBeingUpdated))
+						{
+							$modifiedFiles[] = $file;
+						}
+					}
+				}
+			}
+		}
+
+		return $modifiedFiles;
+	}
+
+	/**
+	 * Find latest backup file
+	 *
+	 * @param   string  $template  Name of template to find backup files
+	 *
+	 * @return  array
+	 */
+	public static function findLatestBackup($template)
+	{
+		$templatePath = JPATH_ROOT . '/templates/' . $template . '/backups';
+		$backupFile = null;
+
+		$zipFiles = glob($templatePath . '/*_modified_files.zip');
+
+		if ($zipFiles !== false)
+		{
+			foreach ($zipFiles AS $file)
+			{
+				if ($backupFile == null OR filemtime($backupFile) < filemtime($file))
+				{
+					$backupFile = $file;
+				}
+			}
+		}
+
+		return $backupFile;
 	}
 
 	/**
 	 * Download templates information data from JoomlaShine server
 	 *
-	 * @return  void
+	 * @return  object
 	 */
 	public static function getVersionData ()
 	{
-		if (empty(self::$_versionData))
+		if (empty(self::$versionData))
 		{
 			try
 			{
-				$response = JSNTplHttpRequest::get('http://www.joomlashine.com/versioning/product_version.php?category=cat_template');
+				$response = JSNTplHttpRequest::get(JSN_TPLFRAMEWORK_VERSIONING_URL . '?category=cat_template');
 			}
 			catch (Exception $e)
 			{
-				throw new Exception('JSN_TPLFW_ERROR_CONTACTING_TO_JOOMLASHINE');
+				throw $e;
 			}
 
-			self::$_versionData = json_decode($response['body'], true);
+			self::$versionData = json_decode($response['body'], true);
 		}
 
 		// Return result
-		return self::$_versionData;
+		return self::$versionData;
 	}
 
 	/**
@@ -357,6 +675,160 @@ abstract class JSNTplHelper
 			}
 		}
 
+		return false;
+	}
+	
+	public static function deleteOrphanMegamenuItems()
+	{
+		$app = JFactory::getApplication();
+		if (!$app->isAdmin())
+		{
+			return false;
+		}
+		
+		$user = JFactory::getUser();
+		if (!$user->authorise('core.admin'))
+		{
+			return false;
+		}
+		
+		$checkMegamenuTableExits = JSNTplHelper::checkMegamenuTable();
+		if (!$checkMegamenuTableExits)
+		{
+			return false;
+		}
+		
+		$db = JFactory::getDbo();
+		$query	= $db->getQuery(true);
+		$query->select('id');
+		$query->from($db->quoteName('#__template_styles'));
+		$db->setQuery($query);
+		$templateIDs = $db->loadColumn();
+		
+		if (!count($templateIDs)) return false;
+		
+		$q	= $db->getQuery(true);
+		$q->select('style_id');
+		$q->from($db->quoteName('#__jsn_tplframework_megamenu'));
+		$db->setQuery($q);
+		$styleIDs = $db->loadColumn();
+		
+		if (!count($styleIDs)) return false;
+		
+		//get style ids not in template ids
+		$check = array_diff($styleIDs,$templateIDs);
+
+		if (count($check))
+		{			
+			$commaSeparated = implode(",", $check);
+			
+			if ($commaSeparated != '')
+			{
+				$query = $db->getQuery(true);
+				
+				$conditions = array(
+						$db->quoteName('style_id') . ' IN (' . $commaSeparated . ")"
+				);
+			
+				$query->delete($db->quoteName('#__jsn_tplframework_megamenu'));
+				$query->where($conditions);
+				$db->setQuery($query);
+				
+				try
+				{
+					$result = $db->execute();
+				}
+				catch (Exception $e)
+				{
+					return false;
+				}
+			}
+		}
+		
+		return true;
+	}
+	
+	/**
+	 * Check megamenu table whether exited, or not.
+	 *
+	 * @return boolean
+	 */	
+	public static function checkMegamenuTable()
+	{
+		$db 			= JFactory::getDbo();
+		$megamenuTable 	= $db->getPrefix() . 'jsn_tplframework_megamenu';
+		$tables 		= $db->getTableList();
+		
+		if (in_array($megamenuTable, $tables))
+		{ 
+			return true;
+		}
+		else 
+		{
+			return self::createMegamenuTable();
+		}
+	}
+	
+	/**
+	 * Execute sql file to create Megamenu table
+	 *
+	 * @return boolean
+	 */
+	public static function createMegamenuTable()
+	{
+		$db 		= JFactory::getDbo();
+		$sqlfile 	= JPATH_ROOT . '/plugins/system/jsntplframework/database/mysql/updates/3.1.0.sql';
+		
+		if (!file_exists($sqlfile))
+		{
+			return false;
+		}		
+		
+		$buffer = file_get_contents($sqlfile);
+
+		if ($buffer === false)
+		{
+			return false;
+		}
+			
+		// Create an array of queries from the sql file
+		$queries = JDatabaseDriver::splitSql($buffer);
+			
+		if (count($queries) == 0)
+		{
+			// No queries to process
+			return false;
+		}
+		
+		// Process each query in the $queries array (split out of sql file).
+		foreach ($queries as $query)
+		{
+			$query = trim($query);
+				
+			if ($query != '' && $query{0} != '#')
+			{
+				$db->setQuery($query);
+					
+				if (!$db->execute())
+				{
+					return false;
+				}
+			}
+		}
+		
+		return true;
+	}
+	
+	/**
+	 *
+	 * @return boolean
+	 */
+	public function isDisabledOpenssl()
+	{
+		if(!function_exists("extension_loaded")	|| !extension_loaded("openssl"))
+		{
+			return true;
+		}		
 		return false;
 	}
 }

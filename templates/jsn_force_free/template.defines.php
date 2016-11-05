@@ -8,5 +8,11 @@
 // No direct access
 defined('_JEXEC') or die('Restricted index access');
 
+// Define template name
+$JoomlaShine_Template_Name = 'Force';
+
+// Define template edition
+$JoomlaShine_Template_Edition = 'FREE';
+
 // Define template version
-define('JSN_FORCE_VERSION', '1.1.0');
+$JoomlaShine_Template_Version = '1.1.0';
