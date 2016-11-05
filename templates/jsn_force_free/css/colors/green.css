@@ -1,0 +1,176 @@
+/**
+* @author    JoomlaShine.com http://www.joomlashine.com
+* @copyright Copyright (C) 2008 - 2011 JoomlaShine.com. All rights reserved.
+* @license   JoomlaShine.com Proprietary License
+*/
+/* ============================== DEFAULT HTML ============================== */
+*::-moz-selection {
+	color: #FFF;
+	text-shadow: none;
+	background: none repeat scroll 0% 0% #00ad5f;
+}
+a {
+	color: #00ad5f;
+}
+a:hover,
+a:active,
+a:focus {
+	color: #367952;
+}
+/* ============================== LAYOUT ============================== */
+/* =============== LAYOUT - OVERALL PAGE =============== */
+/* =============== MENU - MAIN MENU =============== */
+div.jsn-modulecontainer ul.menu-mainmenu li:hover > a,
+div.jsn-modulecontainer ul.menu-mainmenu li.active > a {
+	color: #00ad5f;
+}
+div.jsn-modulecontainer ul.menu-mainmenu ul li.parent.active > a,
+div.jsn-modulecontainer ul.menu-mainmenu ul li.parent:hover > a,
+.jsn-direction-rtl div.jsn-modulecontainer ul.menu-mainmenu li.jsn-submenu-flipback ul li.parent.active > a,
+.jsn-direction-rtl div.jsn-modulecontainer ul.menu-mainmenu li.jsn-submenu-flipback ul li.parent:hover > a,
+.jsn-direction-rtl #jsn-pos-toolbar div.jsn-modulecontainer ul.menu-mainmenu ul li.parent.active > a,
+.jsn-direction-rtl #jsn-pos-toolbar div.jsn-modulecontainer ul.menu-mainmenu ul li.parent:hover > a  {
+	background: url(../../images/colors/green/arrow.png) no-repeat right center;	
+}
+.jsn-direction-rtl div.jsn-modulecontainer ul.menu-mainmenu ul li.parent.active > a,
+.jsn-direction-rtl div.jsn-modulecontainer ul.menu-mainmenu ul li.parent:hover > a,
+div.jsn-modulecontainer ul.menu-mainmenu li.jsn-submenu-flipback ul li.parent.active > a,
+div.jsn-modulecontainer ul.menu-mainmenu li.jsn-submenu-flipback ul li.parent:hover > a,
+#jsn-pos-toolbar div.jsn-modulecontainer ul.menu-mainmenu ul li.parent.active > a,
+#jsn-pos-toolbar div.jsn-modulecontainer ul.menu-mainmenu ul li.parent:hover > a  {
+	background: url(../../images/colors/green/arrow-rtl.png) no-repeat left center;	
+}
+/* =============== MODULE - POSITION TOOLBAR =============== */
+#jsn-menu .jsn-modulecontainer.display-dropdown:hover h3.jsn-moduletitle {
+	color: #00ad5f;
+}
+/* =============== SITETOOL =============== */
+ul#jsn-sitetools-menu > li:hover > a {
+	color: #fff;
+	background: #00ad5f;
+}
+/* ============================== TYPOGRAPHY ============================== */
+/* =============== TYPOGRAPHY - LINK STYLES =============== */
+/* ----- ACTION LINK ----- */
+#jsn-page .link-action {
+	color: #00ad5f;
+	border-bottom: 1px solid #00ad5f;
+}
+#jsn-page .link-action:hover {
+	background-color: #00ad5f;
+}
+/* ----- HIGHTLIGHT LINK ----- */
+li.jsn-highlight a span.jsn-menutitle,
+li.jsn-highlight a span.jsn-menudescription,
+div.jsn-modulecontainer ul li.jsn-highlight > a {
+	color: #00ad5f;
+}
+/* ----- COLOR BUTTON ----- */
+.link-button.button-color {
+	background-color: #00ad5f;
+}
+/* =============== TYPOGRAPHY - TABLE STYLES =============== */
+/* ----- COLOR HEADER TABLE ----- */
+table.style-colorheader thead th {
+	background-color: #00ad5f;
+	border-right: 1px solid #42ab6f;
+}
+table.style-colorheader thead th:first-child {
+	border-left: 1px solid #00ad5f;
+}
+/* ----- COLOR STRIPES TABLE ----- */
+table.style-colorstripes td,
+table.style-colorstripes th {
+	border-bottom: 1px solid #3ca469;
+	border-right: 1px solid #3ca469;
+}
+table.style-colorstripes thead th {
+	background-color: #50b67c;
+}
+table.style-colorstripes thead th.highlight {
+	background-color: #00ad5f;
+}
+table.style-colorstripes tbody tr {
+	background-color: #8cdfaf;
+}
+table.style-colorstripes tbody .highlight {
+	background-color: #d4f4e2;
+}
+table.style-colorstripes tbody tr.odd {
+	background-color: #00ad5f;
+}
+table.style-colorstripes tbody tr.odd .highlight {
+	background-color: #b0e5c7;
+}
+table.style-colorstripes tbody tr:hover th,
+table.style-colorstripes tbody tr:hover td {
+	background-color: #2da15f;
+}
+table.style-colorstripes tbody tr:hover .highlight {
+	background-color: #80cfa2;
+}
+table.style-colorstripes tbody td,
+table.style-colorstripes tbody th {
+	border-left: none;
+	border-right: 1px solid #3ca469;
+}
+table.style-colorstripes tfoot th,
+table.style-colorstripes tfoot td {
+	background-color: #50b67c;
+}
+.sectiontableheader {
+	background-color: #5f9936;
+}
+/* ----- GREY STRIPES TABLE ----- */
+table.style-greystripes thead th.highlight {
+	background-color: #00ad5f;
+}
+/* ============================== MODULE STYLES ============================== */
+/* =============== MODULE STYLES - MODULE BOXES =============== */
+h3.jsn-moduletitle {
+	color: #00ad5f;
+}
+/* ----- SOLID STYLE ----- */
+div.solid-1 div.jsn-modulecontainer_inner {
+	background: #00ad5f;
+}
+/* ----- LIGHTBOX STYLE ----- */
+div.lightbox-2 h3.jsn-moduletitle span {
+	background: #00ad5f;
+}
+/* ----- RICHBOX STYLE ----- */
+div.richbox-2 h3.jsn-moduletitle {
+	background: #00ad5f;
+}
+/* ========== DISPLAY INLINE/DROP DOWN MODULE ========== */
+.jsn-modulecontainer[class*="display-"] form .search input.inputbox:focus + [class*="jsn-icon"] {
+	color: #00ad5f;
+}
+/* ============================== SIDE-MENU/TREE MENU/TOP MENU STYLES ============================== */
+/* ----- HOVER/ACTIVE STATE ----- */
+div.jsn-modulecontainer ul.menu-sidemenu li:hover > a,
+div.jsn-modulecontainer ul.menu-sidemenu li.active > a,
+div.jsn-modulecontainer ul.menu-treemenu li:hover > a,
+div.jsn-modulecontainer ul.menu-treemenu li.active > a,
+div.jsn-modulecontainer ul.menu-topmenu li:hover > a,
+div.jsn-modulecontainer ul.menu-topmenu li.active > a {
+	color: #00ad5f;
+}
+div.jsn-modulecontainer ul.menu-sidemenu ul li.parent.active > a,
+div.jsn-modulecontainer ul.menu-sidemenu ul li.parent:hover > a {
+	background: url(../../images/colors/green/arrow.png) no-repeat right center;	
+}
+.jsn-direction-rtl div.jsn-modulecontainer ul.menu-sidemenu ul li.parent.active > a,
+.jsn-direction-rtl div.jsn-modulecontainer ul.menu-sidemenu ul li.parent:hover > a {
+	background: url(../../images/colors/green/arrow-rtl.png) no-repeat left center;	
+}
+ul.menu-treemenu ul li.active > a > span {
+	background: url(../../images/colors/green/bullet.png) no-repeat left center;
+}
+/* ============================== JOOMLA! DEFAULT EXTENSIONS ============================== */
+/* =============== JOOMLA! EXTENSIONS - COM_CONTENT =============== */
+/* ----- SECTION / CATEGORY BLOG LAYOUT ----- */
+/* PAGE PAGINATION */
+ul.jsn-pagination li.navigation-page span {
+	background-color: #00ad5f;
+}
