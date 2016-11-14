@@ -16,7 +16,7 @@ $jsnUtils   = JSNTplUtils::getInstance();
 <?php if ($jsnUtils->isJoomla3()): ?>
 <?php
 JHtml::_('behavior.caption');
-JHtmlBootstrap::dropdown('dropdown-toggle');
+JHtmlBootstrap::dropdown('dropdown-toggle');    
 ?>
 <div class="blog-featured<?php echo $this->pageclass_sfx;?>" itemscope itemtype="http://schema.org/Blog">
 <?php if ($this->params->get('show_page_heading') != 0) : ?>
