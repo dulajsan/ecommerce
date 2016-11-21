@@ -350,9 +350,10 @@ span.addtocart-button input.addtocart-button-disabled {
 }
 
 .featured-view h4,.latest-view h4,.topten-view h4,.recent-view h4,.related-products-view h4{
-  font-size: 14px;
-  margin: 0 0 8px;
-  padding: 0;
+    font-size: 31px;
+    margin: 0 0 29px;
+    padding: 0px;
+    color: rgba(14, 136, 81, 0.93);
 }
 /*.browse-view h1{font-size:0.2em;margin:0 0 8px;padding:0;}*/
 
@@ -863,6 +864,13 @@ ul.VMmenu,.VMmenu ul,.VMmenu li{
   margin-bottom: 25px;
 }
 
+.featured-view .product{
+    background-color: rgba(35, 62, 59, 0.3);
+    
+    
+}
+
+
 .main-image,.featured-view .product,.latest-view .product,.topten-view .product,.recent-view .product,.related-products-view .product{
   text-align: center;
 }
@@ -947,13 +955,34 @@ span.variant-name, span.custom-variant-name{
   margin-bottom: 5px;
 }
 
+span.addtocart-button input.addtocart-button{
+    
+ background-color: #41ad38 !important;   
+}
+
 span.addtocart-button input.addtocart-button:hover, span.addtocart-button input.notify-button:hover, input.highlight-button:hover, a.highlight:hover{
   background-position: 0 -200px;
   color: #f2f2f2;
+background-color: #41ad38;
 }
 
 .category-view .row .category .spacer,.featured-view .spacer,.latest-view .spacer,.topten-view .spacer,.recent-view .spacer,.related-products-view .spacer,.browse-view .row .product .spacer{
   padding: 6px;
+   
+}
+
+.category-view .row .category .spacer{
+    background-color: #1e7d44; 
+    border:#fff 2px solid;
+    color:#fff;
+}
+
+.category-view .row .category .spacer:hover{
+    
+    cursor: default;
+    transform: rotate(360deg);
+    transition: all 0.3s ease-in-out 0s;
+    color:#fff;
 }
 
 .featured-view .spacer h3,.latest-view .spacer h3,.topten-view .spacer h3,.recent-view .spacer h3,.related-products-view .spacer h3{
@@ -1420,7 +1449,7 @@ div[class*="-view"] .row{
 }
 
 .spacer.product-container {
-  border: 1px solid #ddd;
+  border: 5px solid #fff;
   margin: 2px;
 }
 

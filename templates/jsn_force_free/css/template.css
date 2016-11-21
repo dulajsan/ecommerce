@@ -11,6 +11,11 @@
     -moz-box-sizing: border-box;
     -webkit-box-sizing: border-box;
 }
+
+#jsn-header-inner{
+    width: 1000px !important;
+    
+}
 html, body {
 	line-height: 1.8;
 	margin: 0;
@@ -278,6 +283,7 @@ div[id*=jsn-pos-stick-right] {
 }
 #jsn-logo a img {
 	display: block;
+    width:85px;
 }
 #jsn-headerright {
 	padding: 20px;
